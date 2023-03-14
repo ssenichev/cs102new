@@ -1,5 +1,4 @@
-import pygame  # type: ignore
-from pygame.locals import *  # type: ignore
+import pygame
 
 from life import GameOfLife
 from ui import UI
