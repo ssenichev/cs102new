@@ -159,16 +159,3 @@ class GameOfLife:
         if self.generations == 20:
             return False
         return True
-
-    @staticmethod
-    def from_file(filename: pathlib.Path) -> "GameOfLife":
-        """
-        Прочитать состояние клеток из указанного файла.
-        """
-        pass
-
-    def save(self, filename: pathlib.Path) -> None:
-        """
-        Сохранить текущее состояние клеток в указанный файл.
-        """
-        pass
