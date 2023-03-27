@@ -10,13 +10,37 @@ class Console(UI):
 
     def draw_borders(self, screen) -> None:
         """Отобразить рамку."""
-        pass
+        screen.border("|", "|", "-", "-", "+", "+", "+", "+")
 
     def draw_grid(self, screen) -> None:
         """Отобразить состояние клеток."""
-        pass
+        for x in range(self.life.rows):
+            for y in range(self.life.cols):
+                if self.life.curr_generation[x][y] == 1:
+                    try:
+                        screen.addch(x + 1, y + 1, "*")
+                    except:
+                        print("Change terminal window")
+                else:
+                    try:
+                        screen.addch(x + 1, y + 1, " ")
+                    except:
+                        print("Change terminal window")
 
     def run(self) -> None:
         screen = curses.initscr()
-        # PUT YOUR CODE HERE
-        curses.endwin()
+
+        while True:
+            self.draw_borders(screen)
+            self.draw_grid(screen)
+            screen.refresh()
+            self.life.step()
+            if screen.getch() == ord("q"):
+                curses.endwin()
+                break
+
+
+# if __name__ == "__main__":
+#     game = GameOfLife(size=(23, 80))
+#     ui = Console(life=game)
+#     ui.run()
