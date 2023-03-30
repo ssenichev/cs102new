@@ -1,6 +1,7 @@
 import unittest
-from homework05 import octobot
 from datetime import datetime
+
+from homework05 import octobot
 
 
 class TestOctobot(unittest.TestCase):
@@ -11,9 +12,9 @@ class TestOctobot(unittest.TestCase):
         self.assertFalse(octobot.is_valid_date("01/01/23", "/"))
         self.assertTrue(octobot.is_valid_date("05/05/23", "/"))  # поломка
         today = datetime.today().date().strftime("%d/%m/%y")
-        self.assertTrue(octobot.is_valid_date(today, "/"))    # поломка
+        self.assertTrue(octobot.is_valid_date(today, "/"))  # поломка
         self.assertFalse(octobot.is_valid_date("05/09/30", "/"))
-        self.assertTrue(octobot.is_valid_date("04.05.23", "."))   # поломка
+        self.assertTrue(octobot.is_valid_date("04.05.23", "."))  # поломка
         self.assertFalse(octobot.is_valid_date("35/04/23", "/"))
 
     def test_is_valid_url(self):
