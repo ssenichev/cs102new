@@ -1,12 +1,12 @@
-import telebot
-import gspread
 import json
-import pandas as pd
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
+import gspread   # type: ignore
+import pandas as pd   # type: ignore
+import requests  # type: ignore
+import telebot  # type: ignore
 
 bot = telebot.TeleBot("6141360664:AAGVlc06n8U8g2-zx5JFTmXGpeonnOFdBpQ")
-connected_sheet = False
 
 
 def is_valid_date(date: str = "01/01/00", divider: str = "/") -> bool:
@@ -17,26 +17,50 @@ def is_valid_date(date: str = "01/01/00", divider: str = "/") -> bool:
     - может быть сегодняшним числом
     - пользователь не должен быть обязан вводить конкретный формат даты
     (например, только через точку или только через слеш)"""
-    # PUT YOUR CODE HERE
-    pass
+
+    d, m, y = list(map(int, re.split(r"[/.]", date, maxsplit=2)))
+    today = list(map(int, datetime.today().date().strftime("20%y/%m/%d").split(sep="/")))
+    today = datetime(today[0], today[1], today[2])  # type: ignore
+
+    try:
+        date = datetime(2000 + y, m, d)   # type: ignore
+    except ValueError:
+        return False
+
+    delta = date - today   # type: ignore
+    if delta.days < 365 and date >= today:   # type: ignore
+        return True
+    else:
+        return False
 
 
 def is_valid_url(url: str = "") -> bool:
     """Проверяем, что ссылка рабочая"""
-    # PUT YOUR CODE HERE
-    pass
+    url = url if ("https://" in url or "http://" in url) else ("https://" + url)
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+    except requests.exceptions.RequestException:
+        return False
 
 
 def convert_date(date: str = "01/01/00"):
     """Конвертируем дату из строки в datetime"""
-    # PUT YOUR CODE HERE
-    pass
+    d, m, y = list(map(int, re.split(r"[/.]", date, maxsplit=2)))
+    try:
+        date = datetime(y, m, d)   # type: ignore
+        return date
+    except ValueError:
+        return False
 
 
 def connect_table(message):
     """Подключаемся к Google-таблице"""
     url = message.text
-    sheet_id = '1jgK-YFPufB-hPWvcHAbiUumz5TVRhHX0qV13VhpJYaE'  # Нужно извлечь id страницы из ссылки на Google-таблицу
+    sheet_id = "1jgK-YFPufB-hPWvcHAbiUumz5TVRhHX0qV13VhpJYaE"  # Нужно извлечь id страницы из ссылки на Google-таблицу
     try:
         with open("tables.json") as json_file:
             tables = json.load(json_file)
@@ -46,8 +70,6 @@ def connect_table(message):
         tables = {0: {"url": url, "id": sheet_id}}
     with open("tables.json", "w") as json_file:
         json.dump(tables, json_file)
-    global connected_sheet
-    connected_sheet = True
     bot.send_message(message.chat.id, "Таблица подключена!")
 
 
@@ -56,27 +78,16 @@ def connected_table():
         return True if json_file.readline() != "" else False
 
 
-def access_current_sheet(df=pd.DataFrame):
-    """ Обращаемся к Google-таблице """
+def access_current_sheet():
+    """Обращаемся к Google-таблице"""
     with open("tables.json") as json_file:
         tables = json.load(json_file)
     sheet_id = tables[max(tables)]["id"]
     gc = gspread.service_account(filename="credentials.json")
     sh = gc.open_by_key(sheet_id)
     worksheet = sh.sheet1
-    # Преобразуем Google-таблицу вц таблицу pandas
+    df = pd.DataFrame(worksheet.get_all_records())
     return worksheet, tables[max(tables)]["url"], df
-
-
-def input_data():
-    """ Вводим данные в Google-таблицу """
-    worksheet, url, df = access_current_sheet()
-    # Запрашиваем данные от пользователя
-    subject = input("Введите предмет: ")
-    link = input("Введите ссылку на предмет: ")
-    date = input("Введите дату сдачи предмета: ")
-    worksheet.append_row([subject, link, date])
-    return "Данные успешно добавлены в таблицу"
 
 
 def choose_action(message):
@@ -87,7 +98,9 @@ def choose_action(message):
     elif message.text == "Редактировать предметы":
         subj_markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
         subj_markup.row("Добавить новый предмет")
+        subj_markup.row("Обновить предмет")
         subj_markup.row("Удалить предмет")
+        subj_markup.row("Удалить таблицу")
         info = bot.send_message(message.chat.id, "Что хотите сделать?", reply_markup=subj_markup)
         bot.register_next_step_handler(info, choose_subject_action)
 
@@ -100,48 +113,111 @@ def choose_action(message):
         bot.register_next_step_handler(info, choose_deadline_action)
 
     elif message.text == "Посмотреть дедлайны на этой неделе":
-        # PUT YOUR CODE HERE
-        pass
+        next_week_deadlines(message)
 
 
 def choose_subject_action(message):
-    """Выбираем действие в разделе Редактировать предметы"""
+    """Выбираем действие в разделе редактировать предметы"""
     if message.text == "Добавить новый предмет":
         subj = bot.send_message(message.chat.id, "Введите название предмета: ")
         bot.register_next_step_handler(subj, add_new_subject)
 
+    elif message.text == "Обновить предмет":
+        subject_markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        worksheet, url, df = access_current_sheet()
+
+        subject_list = worksheet.col_values(1)
+        subject_list.pop(0)
+
+        for subject in subject_list:
+            subject_markup.row(str(subject))
+        upd = bot.send_message(message.chat.id, "Выберите название обновляемо предмета", reply_markup=subject_markup)
+        bot.register_next_step_handler(upd, update_subject)
+
     elif message.text == "Удалить предмет":
-        delete_subject(message)
+        deleted = bot.send_message(message.chat.id, "Введите название удаляемого предмета: ")
+        bot.register_next_step_handler(deleted, delete_subject)
+
+    elif message.text == "Удалить таблицу":
+        choose_removal_option(message)
 
 
 def choose_deadline_action(message):
-    """Выбираем действие в разделе Редактировать дедлайн"""
-    # PUT YOUR CODE HERE
-    pass
+    """Выбираем действие в разделе редактировать дедлайн"""
+    if message.text == "Добавить новый дедлайн" or message.text == "Изменить дедлайн":
+        subj = bot.send_message(message.chat.id, "Введите название предмета: ")
+        bot.register_next_step_handler(subj, new_deadline)
+
+    elif message.text == "Удалить дедлайн":
+        subj = bot.send_message(message.chat.id, "Введите название предмета и номер работы: ")
+        bot.register_next_step_handler(subj, delete_deadline)
+
+
+def next_week_deadlines(message):
+    today = list(map(int, datetime.today().date().strftime("20%y/%m/%d").split(sep="/")))
+    today = datetime(today[0], today[1], today[2])
+    worksheet, url, df = access_current_sheet()
+
+    subject_list = worksheet.col_values(1)
+    deadlines_list = worksheet.col_values(3)
+
+    subject_list.pop(0)
+    deadlines_list.pop(0)
+    deadlines_dict = {}
+
+    for i, date in enumerate(deadlines_list):
+        datetime_date = convert_date(date)
+        print(datetime_date)
+        if datetime_date >= today and (datetime_date - today).days <= 7:
+            deadlines_dict[subject_list[i]] = date
+
+    for subject, deadline in zip(deadlines_dict.keys(), deadlines_dict.values()):
+        table_link = worksheet.cell(worksheet.find(subject).row, 2).value
+        bot.send_message(message.chat.id, f"<a href='{table_link}'>{subject} {deadline}</a>", parse_mode="HTML")
+        start(message)
 
 
 def choose_removal_option(message):
     """Уточняем, точно ли надо удалить все"""
-    # PUT YOUR CODE HERE
-    pass
+    delete_all = bot.send_message(message.chat.id, "Уверены ли вы в удалении всей таблицы? Да/Нет")
+    bot.register_next_step_handler(delete_all, clear_subject_list)
 
 
-def choose_subject(message):
+def new_deadline(message):
     """Выбираем предмет, у которого надо отредактировать дедлайн"""
-    # PUT YOUR CODE HERE
-    pass
+    subject = message.text
+    info = bot.send_message(message.chat.id, "Введите дату дедлайна и номер работы")
+    bot.register_next_step_handler(info, update_new_deadline, subject)
 
 
-def update_subject_deadline(message):
+def update_new_deadline(message, subject):
     """Обновляем дедлайн"""
-    # PUT YOUR CODE HERE
-    pass
+    worksheet, url, df = access_current_sheet()
+    date = message.text.split()
+
+    if is_valid_date(date):
+        subject_cell = worksheet.find(subject)
+        worksheet.update_cell(subject_cell.row, 3, date)
+        bot.send_message(message.chat.id, "Дедлайн добавлен")
+        start(message)
+    else:
+        bot.send_message(message.chat.id, "Введена некорректная дата")
+        choose_deadline_action(message)
+
+
+def delete_deadline(message):
+    worksheet, url, df = access_current_sheet()
+    subject, work_number = message.text.split()
+    subject_cell = worksheet.find(subject)
+
+    worksheet.update_cell(subject_cell.row, int(work_number) + 2, "")
+    bot.send_message(message.chat.id, "Дедлайн удален")
+    start(message)
 
 
 def add_new_subject(message):
     """Вносим новое название предмета в Google-таблицу"""
     subject = message.text
-
     link = bot.send_message(message.chat.id, "Введите ссылку на таблицу: ")
     bot.register_next_step_handler(link, add_new_subject_url, subject)
 
@@ -150,28 +226,75 @@ def add_new_subject_url(message, subject):
     """Вносим новую ссылку на таблицу предмета в Google-таблицу"""
     link = message.text
 
-    worksheet, url, df = access_current_sheet()
-    worksheet.append_row([subject, link])
+    if is_valid_url(link):
+        worksheet, url, df = access_current_sheet()
+        worksheet.append_row([subject, link])
 
-    print(df())
+        bot.send_message(message.chat.id, "Данные успешно внесены")
+        start(message)
 
-
-def update_subject(message):
-    """Обновляем информацию о предмете в Google-таблице"""
-    # PUT YOUR CODE HERE
-    pass
+    else:
+        bot.send_message(message.chat.id, "Ссылка некорректна")
+        start(message)
 
 
 def delete_subject(message):
     """Удаляем предмет в Google-таблице"""
-    # PUT YOUR CODE HERE
-    bot.send_message(message.chat.id, "123123")
+    worksheet, url, df = access_current_sheet()
+    deleted_cell = worksheet.find(message.text)
+    worksheet.delete_row(deleted_cell.row)
+
+    bot.send_message(message.chat.id, "Предмет удален из таблицы")
+    start(message)
 
 
 def clear_subject_list(message):
     """Удаляем все из Google-таблицы"""
-    # PUT YOUR CODE HERE
-    pass
+    if message.text == "Да" or message.text == "да":
+        worksheet, url, df = access_current_sheet()
+        worksheet.delete_rows(2, 20)
+        bot.send_message(message.chat.id, "Действие выполнено")
+        start(message)
+
+    elif message.text == "Нет" or message.text == "нет":
+        bot.send_message(message.chat.id, "Действие отменено")
+        start(message)
+
+    else:
+        bot.send_message(message.chat.id, "Введена некорректная опция")
+        start(message)
+
+
+def update_subject(message):
+    """Получаю новое название предмета и ссылку на его таблицу"""
+    subject_new = bot.send_message(message.chat.id, "Введите название предмета и ссылку на таблицу(через пробел)")
+    bot.register_next_step_handler(subject_new, _update_subject, message.text)
+
+
+def _update_subject(message, subject_old):
+    """Ввожу полученные данные из прошлой функции"""
+    subject_new, table = message.text.split()
+
+    if is_valid_url(table):
+        worksheet, url, df = access_current_sheet()
+        subject_old_cell = worksheet.find(subject_old)
+
+        worksheet.update_cell(subject_old_cell.row, 1, subject_new)
+        worksheet.update_cell(subject_old_cell.row, 2, table)
+
+        # почему ничего из этого не работает корректно?
+        # worksheet.update(f'A{subject_old_cell.row}:B{subject_old_cell.row}', [[str(subject_new)], [str(table)]])
+        # worksheet.batch_update({
+        #     'range': str(f'A{subject_old_cell.row}:B{subject_old_cell.row}'),
+        #     'values': [[subject_new], [table]]
+        # })
+
+        bot.send_message(message.chat.id, "Данные успешно обновлены")
+        start(message)
+
+    else:
+        bot.send_message(message.chat.id, "Введена некорректная ссылка")
+        start(message)
 
 
 @bot.message_handler(commands=["start"])
