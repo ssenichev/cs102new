@@ -24,12 +24,12 @@ def is_valid_date(date: str = "01/01/00", divider: str = "/") -> bool:
     today = datetime(today[0], today[1], today[2])  # type: ignore
 
     try:
-        date = datetime(2000 + y, m, d)   # type: ignore
+        date = datetime(2000 + y, m, d)  # type: ignore
     except ValueError:
         return False
 
-    delta = date - today   # type: ignore
-    if delta.days < 365 and date >= today:   # type: ignore
+    delta = date - today  # type: ignore
+    if delta.days < 365 and date >= today:  # type: ignore
         return True
     else:
         return False
@@ -52,7 +52,7 @@ def convert_date(date: str = "01/01/00"):
     """Конвертируем дату из строки в datetime"""
     d, m, y = list(map(int, re.split(r"[/.]", date, maxsplit=2)))
     try:
-        date = datetime(y, m, d)   # type: ignore
+        date = datetime(y, m, d)  # type: ignore
         return date
     except ValueError:
         return False
