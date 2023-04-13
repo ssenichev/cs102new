@@ -1,6 +1,7 @@
 import json
 import re
-from datetime import datetime
+import typing as tp
+from datetime import datetime, timedelta
 
 import gspread  # type: ignore
 import pandas as pd  # type: ignore
@@ -20,8 +21,8 @@ def is_valid_date(date: str = "01/01/00", divider: str = "/") -> bool:
     (например, только через точку или только через слеш)"""
 
     d, m, y = list(map(int, re.split(r"[/.]", date, maxsplit=2)))
-    today = list(map(int, datetime.today().date().strftime("20%y/%m/%d").split(sep="/")))
-    today = datetime(today[0], today[1], today[2])  # type: ignore
+    today_list: tp.List[int] = list(map(int, datetime.today().date().strftime("20%y/%m/%d").split(sep="/")))
+    today = datetime(today_list[0], today_list[1], today_list[2])
 
     try:
         date = datetime(2000 + y, m, d)  # type: ignore
@@ -29,10 +30,7 @@ def is_valid_date(date: str = "01/01/00", divider: str = "/") -> bool:
         return False
 
     delta = date - today  # type: ignore
-    if delta.days < 365 and date >= today:  # type: ignore
-        return True
-    else:
-        return False
+    return delta.days < 365 and date >= today  # type: ignore
 
 
 def is_valid_url(url: str = "") -> bool:
@@ -102,6 +100,7 @@ def choose_action(message):
         subj_markup.row("Обновить предмет")
         subj_markup.row("Удалить предмет")
         subj_markup.row("Удалить таблицу")
+        subj_markup.row("Назад")
         info = bot.send_message(message.chat.id, "Что хотите сделать?", reply_markup=subj_markup)
         bot.register_next_step_handler(info, choose_subject_action)
 
@@ -110,11 +109,15 @@ def choose_action(message):
         deadline_markup.row("Добавить новый дедлайн")
         deadline_markup.row("Удалить дедлайн")
         deadline_markup.row("Изменить дедлайн")
+        deadline_markup.row("Назад")
         info = bot.send_message(message.chat.id, "Что хотите сделать?", reply_markup=deadline_markup)
         bot.register_next_step_handler(info, choose_deadline_action)
 
     elif message.text == "Посмотреть дедлайны на этой неделе":
         next_week_deadlines(message)
+
+    else:
+        start(message)
 
 
 def choose_subject_action(message):
@@ -142,6 +145,12 @@ def choose_subject_action(message):
     elif message.text == "Удалить таблицу":
         choose_removal_option(message)
 
+    elif message.text == "Назад":
+        start(message)
+
+    else:
+        choose_subject_action(message)
+
 
 def choose_deadline_action(message):
     """Выбираем действие в разделе редактировать дедлайн"""
@@ -153,29 +162,33 @@ def choose_deadline_action(message):
         subj = bot.send_message(message.chat.id, "Введите название предмета и номер работы: ")
         bot.register_next_step_handler(subj, delete_deadline)
 
+    elif message.text == "Назад":
+        start(message)
+
+    else:
+        choose_deadline_action(message)
+
 
 def next_week_deadlines(message):
-    today = list(map(int, datetime.today().date().strftime("20%y/%m/%d").split(sep="/")))
-    today = datetime(today[0], today[1], today[2])
+    today = datetime.today()
+    week = today + timedelta(days=7)
+    deadline_message = ""
     worksheet, url, df = access_current_sheet()
 
-    subject_list = worksheet.col_values(1)
-    deadlines_list = worksheet.col_values(3)
+    for i in range(2, len(worksheet.col_values(1)) + 1):
+        for deadline in worksheet.row_values(i)[2:]:
 
-    subject_list.pop(0)
-    deadlines_list.pop(0)
-    deadlines_dict = {}
+            try:
+                if week >= convert_date(deadline) >= today:
+                    deadline_message += f"{worksheet.cell(i, 1).value}: {deadline}\n"
+            except ValueError:
+                continue
 
-    for i, date in enumerate(deadlines_list):
-        datetime_date = convert_date(date)
-        print(datetime_date)
-        if datetime_date >= today and (datetime_date - today).days <= 7:
-            deadlines_dict[subject_list[i]] = date
+    if not deadline_message:
+        deadline_message = "На данной неделе дедлайнов нет"
 
-    for subject, deadline in zip(deadlines_dict.keys(), deadlines_dict.values()):
-        table_link = worksheet.cell(worksheet.find(subject).row, 2).value
-        bot.send_message(message.chat.id, f"<a href='{table_link}'>{subject} {deadline}</a>", parse_mode="HTML")
-        start(message)
+    bot.send_message(message.chat.id, deadline_message)
+    start(message)
 
 
 def choose_removal_option(message):
@@ -194,7 +207,7 @@ def new_deadline(message):
 def update_new_deadline(message, subject):
     """Обновляем дедлайн"""
     worksheet, url, df = access_current_sheet()
-    date = message.text.split()
+    date, work_number = message.text.split()
 
     if is_valid_date(date):
         subject_cell = worksheet.find(subject)
@@ -219,15 +232,21 @@ def delete_deadline(message):
 def add_new_subject(message):
     """Вносим новое название предмета в Google-таблицу"""
     subject = message.text
-    link = bot.send_message(message.chat.id, "Введите ссылку на таблицу: ")
-    bot.register_next_step_handler(link, add_new_subject_url, subject)
+
+    if not check_subject(subject):
+        link = bot.send_message(message.chat.id, "Введите ссылку на таблицу: ")
+        bot.register_next_step_handler(link, add_new_subject_url, subject)
+    else:
+        bot.send_message(message.chat.id, "Данный предмет уже есть в таблице")
+        start(message)
 
 
 def add_new_subject_url(message, subject):
     """Вносим новую ссылку на таблицу предмета в Google-таблицу"""
-    link = message.text
+    url = message.text
 
-    if is_valid_url(link):
+    if is_valid_url(url):
+        link = "" if url == "нет" else url
         worksheet, url, df = access_current_sheet()
         worksheet.append_row([subject, link])
 
@@ -237,6 +256,11 @@ def add_new_subject_url(message, subject):
     else:
         bot.send_message(message.chat.id, "Ссылка некорректна")
         start(message)
+
+
+def check_subject(checked_subject):
+    worksheet, url, df = access_current_sheet()
+    return checked_subject in worksheet.col_values(1)
 
 
 def delete_subject(message):
@@ -282,13 +306,6 @@ def _update_subject(message, subject_old):
 
         worksheet.update_cell(subject_old_cell.row, 1, subject_new)
         worksheet.update_cell(subject_old_cell.row, 2, table)
-
-        # почему ничего из этого не работает корректно?
-        # worksheet.update(f'A{subject_old_cell.row}:B{subject_old_cell.row}', [[str(subject_new)], [str(table)]])
-        # worksheet.batch_update({
-        #     'range': str(f'A{subject_old_cell.row}:B{subject_old_cell.row}'),
-        #     'values': [[subject_new], [table]]
-        # })
 
         bot.send_message(message.chat.id, "Данные успешно обновлены")
         start(message)
