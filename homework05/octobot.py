@@ -177,7 +177,6 @@ def next_week_deadlines(message):
 
     for i in range(2, len(worksheet.col_values(1)) + 1):
         for deadline in worksheet.row_values(i)[2:]:
-
             try:
                 if week >= convert_date(deadline) >= today:
                     deadline_message += f"{worksheet.cell(i, 1).value}: {deadline}\n"
