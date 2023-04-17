@@ -3,10 +3,10 @@ import re
 import typing as tp
 from datetime import datetime, timedelta
 
-import gspread  # type: ignore
-import pandas as pd  # type: ignore
-import requests  # type: ignore
-import telebot  # type: ignore
+import gspread
+import pandas as pd
+import requests
+import telebot
 
 bot = telebot.TeleBot("6141360664:AAGVlc06n8U8g2-zx5JFTmXGpeonnOFdBpQ")
 
@@ -25,7 +25,10 @@ def is_valid_date(date: str = "01/01/00", divider: str = "/") -> bool:
     today = datetime(today_list[0], today_list[1], today_list[2])
 
     try:
-        date = datetime(2000 + y, m, d)  # type: ignore
+        if len(str(y)) == 2:
+            date = datetime(2000 + y, m, d)  # type: ignore
+        elif len(str(y)) == 4:
+            date = datetime(y, m, d)  # type: ignore
     except ValueError:
         return False
 
@@ -326,4 +329,4 @@ def start(message):
     bot.register_next_step_handler(info, choose_action)
 
 
-# bot.infinity_polling()
+bot.infinity_polling()
