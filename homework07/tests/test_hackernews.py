@@ -1,11 +1,11 @@
 import unittest
+import warnings
 from unittest import mock
 from unittest.mock import call
 
 from boddle import boddle  # type: ignore
 from bottle import HTTPResponse  # type: ignore
 from db import News
-import warnings
 from hackernews import add_label, classify_news, update_news
 
 warnings.simplefilter(action="ignore", category=FutureWarning)

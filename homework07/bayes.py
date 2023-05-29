@@ -3,7 +3,7 @@ import warnings
 from math import log
 
 import numpy as np
-import pandas as pd   # type: ignore
+import pandas as pd # type: ignore
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 

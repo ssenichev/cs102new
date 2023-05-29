@@ -1,5 +1,5 @@
-import sqlite3
 import random
+import sqlite3
 
 connection = sqlite3.connect('news.db')
 cursor = connection.cursor()
