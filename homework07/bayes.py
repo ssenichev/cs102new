@@ -13,7 +13,6 @@ class NaiveBayesClassifier:
         self.alpha = alpha
         self.classes_psb = None
         self.prior_psb = dict()
-        # self.attr_prb = pd.DataFrame()
         self.model = pd.DataFrame()
 
     def fit(self, X, y):
