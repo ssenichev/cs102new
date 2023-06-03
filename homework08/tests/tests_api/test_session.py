@@ -3,8 +3,12 @@ import unittest
 
 import httpretty  # type: ignore
 import responses  # type: ignore
-from requests.exceptions import (ConnectionError, HTTPError,  # type: ignore
-                                 ReadTimeout, RetryError)
+from requests.exceptions import (  # type: ignore
+    ConnectionError,
+    HTTPError,
+    ReadTimeout,
+    RetryError,
+)
 
 from homework08.vkapi.session import Session
 
