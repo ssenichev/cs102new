@@ -81,7 +81,7 @@ class MutualFriends(tp.TypedDict):
 def get_mutual(
     source_uid: tp.Optional[int] = None,
     target_uid: tp.Optional[int] = None,
-    target_uids: tp.List[tp.Optional[int]] = None,
+    target_uids: tp.List[tp.Optional[int]] = None,  # type: ignore
     order: str = "",
     count: tp.Optional[int] = None,
     offset: int = 0,
