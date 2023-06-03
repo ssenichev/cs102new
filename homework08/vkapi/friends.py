@@ -122,7 +122,6 @@ def get_mutual(
 
     elif type(target_uid) != int or type(target_uids) is not None:
         if len(target_uids) > 100:  # type: ignore
-
             commons = []  # type: ignore
             performed_num = 0
             to_perform = len(target_uids)  # type: ignore
