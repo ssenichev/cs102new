@@ -49,6 +49,7 @@ class FriendsTestCase(unittest.TestCase):
             status=200,
         )
         mutual_friends = get_mutual(source_uid=123, target_uid=456)
+        print(mutual_friends)
         self.assertEqual(common_friends, mutual_friends)
 
     @responses.activate

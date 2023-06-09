@@ -24,6 +24,8 @@ class FriendsResponse:
     def __len__(self):
         return self.count
 
+    # def __call__(self, *args, **kwargs):
+
 
 def get_friends(
     user_id: int = 476830585, count: int = 5000, offset: int = 0, fields: tp.Optional[tp.List[str]] = None
@@ -68,7 +70,6 @@ def get_friends(
 
     df.dropna(inplace=True)
     friends_response = FriendsResponse(count=len(df["id"].tolist()), items=df["id"].tolist())
-    # return df['id'].tolist()
     return friends_response
 
 
@@ -99,16 +100,13 @@ def get_mutual(
     :param offset: Смещение, необходимое для выборки определенного подмножества общих друзей.
     :param progress: Callback для отображения прогресса.
     """
-    domain = VK_CONFIG["domain"]
-    access_token = VK_CONFIG["access_token"]
-    v = VK_CONFIG["version"]
 
     query_params = {
         "access_token": config.VK_CONFIG["access_token"],
         "v": VK_CONFIG["version"],
         "source_uid": source_uid,
         "target_uid": target_uid,
-        "target_uids": target_uids,
+        "target_uids": ",".join(map(str, target_uids)) if target_uids is not None else None,
         "order": order,
         "count": count,
         "offset": offset,
@@ -120,7 +118,7 @@ def get_mutual(
         mutual = response.json()["response"]
         return mutual
 
-    elif type(target_uid) != int or type(target_uids) is not None:
+    else:
         if len(target_uids) > 100:  # type: ignore
             commons = []  # type: ignore
             performed_num = 0
@@ -139,6 +137,8 @@ def get_mutual(
                 query_params["offset"] += 100
                 time.sleep(4)
 
+            commons = list(filter(lambda d: d["common_friends"] != [], commons))
+
             return commons
 
         else:
@@ -149,13 +149,13 @@ def get_mutual(
             except KeyError:
                 return []  # type: ignore
 
-    else:
-        return []  # type: ignore
-
 
 if __name__ == "__main__":
-    list = get_friends(user_id=408461889, fields=["sex"])
-    print(list.count)
+    #  100+ friends id: 408461889
+    #  my id: 476830585
 
-    mutual_friends = get_mutual(target_uids=list.items)  # type: ignore
+    get_friends_FR = get_friends(user_id=408461889, fields=["sex"])
+    friends_list = list(get_friends_FR.items)
+
+    mutual_friends = get_mutual(target_uids=friends_list)  # type: ignore
     print(mutual_friends)
