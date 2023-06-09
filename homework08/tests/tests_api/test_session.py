@@ -7,7 +7,7 @@ from requests.exceptions import (  # type: ignore
     ConnectionError,
     HTTPError,
     ReadTimeout,
-    RetryError
+    RetryError,
 )
 
 from homework08.vkapi.session import Session
