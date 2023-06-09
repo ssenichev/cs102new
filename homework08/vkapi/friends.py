@@ -69,6 +69,8 @@ def get_friends(
         df["id"] = people
 
     df.dropna(inplace=True)
+    # return df  # на случай НАСТОЯЩЕГО нахождения возраста
+
     friends_response = FriendsResponse(count=len(df["id"].tolist()), items=df["id"].tolist())
     return friends_response
 

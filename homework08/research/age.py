@@ -16,10 +16,20 @@ def age_predict(user_id: int = 476830585) -> tp.Optional[float]:
     :param user_id: Идентификатор пользователя.
     :return: Медианный возраст пользователя.
     """
-    friends = get_friends(user_id=user_id, fields=["sex"])
+    # friends = get_friends(user_id=user_id, fields=["bdate"])  # кейс для НАСТОЯЩЕЙ ПРОВЕРКИ
+    # dates = friends["bdate"].to_list()
+    # age = []
+    # for date in dates:
+    #     try:
+    #         bday = int(date.split(".")[2])
+    #         age.append(year - bday)
+    #     except (AttributeError, IndexError, KeyError):
+    #         pass
+    # return round(np.median(np.array(age)), 1)
+
+    friends = get_friends(user_id=user_id)  # кейс для ТЕСТОВ
     age = []
     year = dt.date.today().year
-    print(friends)
 
     for friend in friends:
         try:
@@ -28,6 +38,7 @@ def age_predict(user_id: int = 476830585) -> tp.Optional[float]:
         except (AttributeError, IndexError, KeyError):
             pass
 
+    print(age)
     return round(np.median(np.array(age)), 1)
 
 
