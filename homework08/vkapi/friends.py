@@ -28,7 +28,11 @@ class FriendsResponse:
 
 
 def get_friends(
-    user_id: int = 476830585, count: int = 5000, offset: int = 0, fields: tp.Optional[tp.List[str]] = None
+    user_id: int = 476830585,
+    count: int = 5000,
+    offset: int = 0,
+    fields: tp.Optional[tp.List[str]] = None,
+    df_return: bool = False,
 ) -> FriendsResponse:
     """
     Получить список идентификаторов друзей пользователя или расширенную информацию
@@ -69,10 +73,12 @@ def get_friends(
         df["id"] = people
 
     df.dropna(inplace=True)
-    # return df  # на случай НАСТОЯЩЕГО нахождения возраста
 
-    friends_response = FriendsResponse(count=len(df["id"].tolist()), items=df["id"].tolist())
-    return friends_response
+    if df_return:
+        return df  # на случай НАСТОЯЩЕГО нахождения возраста
+    else:
+        friends_response = FriendsResponse(count=len(df["id"].tolist()), items=df["id"].tolist())
+        return friends_response
 
 
 class MutualFriends(tp.TypedDict):
@@ -156,8 +162,14 @@ if __name__ == "__main__":
     #  100+ friends id: 408461889
     #  my id: 476830585
 
-    get_friends_FR = get_friends(user_id=408461889, fields=["sex"])
-    friends_list = list(get_friends_FR.items)
+    get_friends_FR = get_friends(user_id=408461889, fields=["sex"], df_return=False)
+    print(get_friends_FR)
+    friends_list_FR = list(get_friends_FR.items)
+    mutual_friends_FR = get_mutual(target_uids=friends_list_FR)  # type: ignore
+    print(mutual_friends_FR)
 
-    mutual_friends = get_mutual(target_uids=friends_list)  # type: ignore
-    print(mutual_friends)
+    get_friends_DF = get_friends(user_id=408461889, fields=["sex"], df_return=True)
+    print(get_friends_DF)
+    friends_list_DF = get_friends_DF["id"].to_list()  # type: ignore
+    mutual_friends_DF = get_mutual(target_uids=friends_list_DF)  # type: ignore
+    print(mutual_friends_DF)

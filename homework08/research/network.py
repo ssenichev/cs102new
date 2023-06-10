@@ -10,7 +10,7 @@ from homework08.vkapi.friends import get_friends, get_mutual
 
 
 def ego_network(
-    user_id: tp.Optional[int] = None, friends: tp.Optional[tp.List[int]] = None
+    user_id: tp.Optional[int] = None, friends: tp.Optional[tp.List[int]] = None, test_case: bool = False
 ) -> tp.List[tp.Tuple[int, int]]:
     """
     Построить эгоцентричный граф друзей.
@@ -38,7 +38,11 @@ def ego_network(
     #
     # return edges
     if friends is None:
-        friends = list(get_friends(user_id=user_id, fields=["sex"]))  # type: ignore
+        if test_case:
+            friends = list(get_friends(user_id=user_id, fields=["sex"]))  # type: ignore
+        else:
+            friends = get_friends(user_id=user_id, fields=["sex"], df_return=True)["id"].to_list()  # type: ignore
+            # для работы с DF
 
     graph = []
     mutual_list = get_mutual(target_uids=friends)  # type: ignore
@@ -108,5 +112,6 @@ if __name__ == "__main__":
     #  100+ friends id: 408461889
     #  my id: 476830585
 
-    ego = ego_network(user_id=408461889)
+    ego = ego_network(user_id=408461889, test_case=False)
+    print(ego)
     plot_ego_network(ego)
