@@ -1,8 +1,9 @@
-from bayes import NaiveBayesClassifier
 from bottle import redirect, request, route, run, template  # type: ignore
-from db import News, session
-from scraputils import get_news
 from sqlalchemy import exists  # type: ignore
+
+from bayes import NaiveBayesClassifier
+from db import News, session
+from scraputils import extract_news, get_news
 
 
 @route("/news")
@@ -37,7 +38,7 @@ def add_label():
 @route("/update")
 def update_news():
     s = session()
-    news = get_news("https://news.ycombinator.com/newest", 3)
+    news = get_news("https://news.ycombinator.com/newest", 5)
 
     for n in news:
         new = News(title=n["title"], author=n["author"], url=n["url"], comments=n["comments"], points=n["points"])
@@ -59,14 +60,15 @@ def classify_news():
     y = [i.label for i in train]
     bayes.fit(x, y)
 
-    news = s.query(News).filter(News.label is None).all()
+    # news = s.query(News).filter(News.label is None).all()
+    news = s.query(News).all()
     X = [i.title for i in news]
     y = bayes.predict(X)
 
     for i, item in enumerate(news):
         item.label = y[i]
-
     s.commit()
+    # print(bayes.score(X, y))
 
     return sorted(news, key=lambda x: x.label)
 
@@ -91,4 +93,4 @@ def recommendations():
 
 
 if __name__ == "__main__":
-    run(host="localhost", port=8080)
+    run(host="localhost", port=8090)
