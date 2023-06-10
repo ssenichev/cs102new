@@ -65,7 +65,6 @@ class TestBayes(unittest.TestCase):
         model.fit(X_train, y_train)
         actual_score = model.score(X_test, y_test)
         expected_score = 0.9321531100478469
-        print(actual_score)
         self.assertGreaterEqual(actual_score, expected_score)
 
 
