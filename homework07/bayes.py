@@ -21,7 +21,7 @@ class NaiveBayesClassifier:
         слово / кол-во входов / кол-во входов в каждый класс(?)
         -> дальше хз
         """
-        self.classes_psb = list(set(y))
+        self.classes_psb = list(set(y) - {None})
         features = self.classes_psb.copy()
         features.insert(0, "word")
 
