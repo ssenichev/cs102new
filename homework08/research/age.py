@@ -7,7 +7,7 @@ import numpy as np
 from homework08.vkapi.friends import get_friends
 
 
-def age_predict(user_id: int = 476830585, test_case: bool = False) -> tp.Optional[float]:
+def age_predict(user_id: int = 476830585, test_case: bool = True) -> tp.Optional[float]:
     """
     Наивный прогноз возраста пользователя по возрасту его друзей.
 
