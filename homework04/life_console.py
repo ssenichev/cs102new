@@ -9,14 +9,33 @@ class Console(UI):
         super().__init__(life)
 
     def draw_borders(self, screen) -> None:
-        """ Отобразить рамку. """
-        pass
+        screen.border("|", "|", "-", "-", "+", "+", "+", "+")
 
     def draw_grid(self, screen) -> None:
-        """ Отобразить состояние клеток. """
-        pass
+        for i in range(self.life.rows):
+            for j in range(self.life.cols):
+                if self.life.curr_generation[i][j] == 1:
+                    try:
+                        screen.addch(i + 1, j + 1, "*")
+                    except:
+                        print("error")
+
+                else:
+                    try:
+                        screen.addch(i + 1, j + 1, " ")
+                    except:
+                        print("error")
 
     def run(self) -> None:
         screen = curses.initscr()
-        # PUT YOUR CODE HERE
-        curses.endwin()
+
+        while True:
+            self.draw_borders(screen)
+            self.draw_grid(screen)
+
+            screen.refresh()
+            self.life.step()
+
+            if screen.getch() == ord("q"):
+                curses.endwin()
+                break
