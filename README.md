@@ -9,9 +9,9 @@ homework05 - Телеграм-бот Octobot
 *telegram API*  
 homework06 - Дескриптивный анализ данных  
 *pandas and data analysis*  
-homework07 - Персонализация новостной ленты
-*naive bayes and web parsing*. 
-homework08 - Работа с API ВКонтакте
+homework07 - Персонализация новостной ленты  
+*naive bayes and web parsing*  
+homework08 - Работа с API ВКонтакте  
 *vk api with minor pandas usage*  
 homework09 - Линейная регрессия  
 *linear regression with gradient boost and cross-validation hyper parameters tuning*  
